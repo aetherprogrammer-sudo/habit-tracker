@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Habit Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom scrollbar for the table */
+        .table-container::-webkit-scrollbar {
+            height: 8px;
+            width: 8px;
+        }
+        .table-container::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        .table-container::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        /* Fix table borders with sticky left column */
+        table { border-collapse: separate; border-spacing: 0; }
+        th, td { border-bottom: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb; }
+        th { border-top: 1px solid #e5e7eb; }
+        tr td:first-child, tr th:first-child { border-left: 1px solid #e5e7eb; }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-[#d4d8f0] via-[#e2d5ed] to-[#f3d0e3] p-4 md:p-8 font-sans text-gray-800 flex justify-center">
+
+    <div class="max-w-[1400px] w-full bg-white rounded-3xl shadow-2xl overflow-hidden border border-white/40">
+        
+        <!-- Header Title -->
+        <div class="text-center pt-8 pb-4">
+            <h2 class="text-3xl md:text-4xl font-serif italic text-gray-500 mb-1">Ultimate</h2>
+            <h1 class="text-5xl md:text-6xl font-black uppercase tracking-wider text-gray-900">Habit Tracker</h1>
+        </div>
+
+        <div class="p-6 lg:p-10">
+            
+            <!-- Top Dashboard Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-10">
+                
+                <!-- Calendar Widget -->
+                <div class="lg:col-span-3 bg-white border border-gray-100 rounded-2xl shadow-sm p-5 flex flex-col justify-center">
+                    <div class="flex justify-between items-center mb-4 border border-gray-200 rounded-lg p-2">
+                        <button id="prev-month" class="p-1 hover:bg-gray-100 rounded text-gray-500 transition">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                        </button>
+                        <span id="calendar-month-year" class="font-semibold text-gray-700">Month Year</span>
+                        <button id="next-month" class="p-1 hover:bg-gray-100 rounded text-gray-500 transition">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-7 gap-1 text-center text-xs mb-2 text-gray-400 font-semibold" id="calendar-weekdays">
+                        <!-- Populated by JS -->
+                    </div>
+                    <div class="grid grid-cols-7 gap-1 text-center text-sm" id="calendar-days">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Overall Progress Donut -->
+                <div class="lg:col-span-3 bg-white border border-gray-100 rounded-2xl shadow-sm p-5 flex flex-col items-center justify-center relative">
+                    <h3 class="text-sm font-bold text-gray-800 mb-4 absolute top-5">Overall Progress</h3>
+                    <div class="relative w-40 h-40 mt-6">
+                        <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                            <!-- Background track -->
+                            <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f3f4f6" stroke-width="12"></circle>
+                            <!-- Progress circle -->
+                            <circle id="donut-progress" cx="50" cy="50" r="40" fill="transparent" stroke="#e1b8c9" stroke-width="12" stroke-dasharray="251.2" stroke-dashoffset="251.2" stroke-linecap="round" class="transition-all duration-1000 ease-out"></circle>
+                        </svg>
+                        <div class="absolute inset-0 flex items-center justify-center flex-col">
+                            <span id="donut-text" class="text-2xl font-bold text-gray-800">0.0%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Daily Progress Bar Chart -->
+                <div class="lg:col-span-6 bg-white border border-gray-100 rounded-2xl shadow-sm p-5 flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-sm font-bold text-gray-800">Daily Completion</h3>
+                        <span class="text-xs text-gray-400">100% Target</span>
+                    </div>
+                    <div class="flex-1 flex items-end justify-between gap-[2px] mt-2 relative" id="bar-chart-container">
+                        <!-- Horizontal grid lines -->
+                        <div class="absolute inset-0 flex flex-col justify-between pointer-events-none">
+                            <div class="w-full h-px bg-gray-100"></div>
+                            <div class="w-full h-px bg-gray-100"></div>
+                            <div class="w-full h-px bg-gray-100"></div>
+                            <div class="w-full h-px bg-gray-100"></div>
+                        </div>
+                        <!-- Bars Populated by JS -->
+                    </div>
+                    <div class="flex justify-between mt-2 px-1">
+                        <span class="text-[10px] text-gray-400 font-medium">1</span>
+                        <span id="bar-chart-max-day" class="text-[10px] text-gray-400 font-medium">31</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Tracker Grid -->
+            <div class="overflow-x-auto rounded-xl shadow-sm bg-white table-container relative z-0">
+                <table class="w-full text-sm text-left">
+                    <thead id="grid-head">
+                        <!-- Populated by JS -->
+                    </thead>
+                    <tbody id="grid-body">
+                        <!-- Populated by JS -->
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td class="sticky left-0 z-10 bg-white border-gray-200 p-3 shadow-[1px_0_0_0_#e5e7eb]">
+                                <form id="add-habit-form" class="flex items-center">
+                                    <input 
+                                        type="text" 
+                                        id="new-habit-input"
+                                        placeholder="Add new habit..."
+                                        class="w-full text-sm p-1.5 border border-dashed border-gray-300 rounded focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 bg-gray-50"
+                                    />
+                                    <button 
+                                        type="submit" 
+                                        class="ml-2 p-1.5 bg-gray-800 text-white rounded hover:bg-gray-700 transition"
+                                    >
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                                    </button>
+                                </form>
+                            </td>
+                            <td id="grid-footer-span" class="bg-gray-50/50 border-gray-200"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            
+            <div class="mt-8 text-center text-sm text-gray-400 flex items-center justify-center gap-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                <span>Track your daily habits and achieve your goals. Your data is stored locally for this session.</span>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Data & State
+        const INITIAL_HABITS = [
+            { id: 'h1', name: 'Wake up at 7 AM' },
+            { id: 'h2', name: 'Drink 10 cups of water' },
+            { id: 'h3', name: 'Meditate - 10 mins' },
+            { id: 'h4', name: 'Go on a run' },
+            { id: 'h5', name: 'Eat only healthy snacks' },
+            { id: 'h6', name: 'Call friends' },
+            { id: 'h7', name: 'Compliment 5 random people' },
+        ];
+
+        const WEEK_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+        // Color palettes mapped for Tailwinds arbitrary values/classes
+        const COLOR_BLOCKS = [
+            { bg: 'bg-blue-50/60', border: 'border-blue-200', active: 'bg-blue-400', ring: 'ring-blue-200', fill: '#60a5fa' },
+            { bg: 'bg-emerald-50/60', border: 'border-emerald-200', active: 'bg-emerald-400', ring: 'ring-emerald-200', fill: '#34d399' },
+            { bg: 'bg-yellow-50/60', border: 'border-yellow-200', active: 'bg-yellow-400', ring: 'ring-yellow-200', fill: '#facc15' },
+            { bg: 'bg-orange-50/60', border: 'border-orange-200', active: 'bg-orange-400', ring: 'ring-orange-200', fill: '#fb923c' },
+            { bg: 'bg-rose-50/60', border: 'border-rose-200', active: 'bg-rose-400', ring: 'ring-rose-200', fill: '#fb7185' }
+        ];
+
+        let state = {
+            currentDate: new Date(2026, 4, 1), // Default to May 2026
+            habits: [...INITIAL_HABITS],
+            trackingData: {}
+        };
+
+        // Utility: Get color block based on day index (0-30)
+        function getColorBlock(dayIndex) {
+            return COLOR_BLOCKS[Math.min(Math.floor(dayIndex / 7), 4)];
+        }
+
+        // Initialize Mock Data
+        function generateMockData() {
+            const days = new Date(2026, 5, 0).getDate(); // May 2026 has 31 days
+            state.habits.forEach((habit, hIdx) => {
+                for (let d = 1; d <= days; d++) {
+                    if (Math.random() > (0.2 + (hIdx * 0.1))) {
+                        state.trackingData[`${habit.id}-2026-4-${d}`] = true;
+                    }
+                }
+            });
+        }
+
+        // --- Render Functions ---
+
+        function renderCalendar() {
+            const year = state.currentDate.getFullYear();
+            const month = state.currentDate.getMonth();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const firstDayOfMonth = new Date(year, month, 1).getDay();
+
+            // Set Month/Year text
+            document.getElementById('calendar-month-year').textContent = 
+                state.currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+            // Set Weekdays
+            const weekdaysContainer = document.getElementById('calendar-weekdays');
+            if(weekdaysContainer.innerHTML.trim() === '') {
+                weekdaysContainer.innerHTML = WEEK_DAYS.map(day => `<div>${day.charAt(0)}</div>`).join('');
+            }
+
+            // Set Days
+            const daysContainer = document.getElementById('calendar-days');
+            let daysHTML = '';
+            
+            // Empty slots
+            for (let i = 0; i < firstDayOfMonth; i++) {
+                daysHTML += `<div class="text-transparent">.</div>`;
+            }
+            
+            // Actual days
+            const today = new Date();
+            for (let d = 1; d <= daysInMonth; d++) {
+                const isToday = d === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+                const classes = isToday ? 'bg-gray-800 text-white font-bold' : 'text-gray-600';
+                daysHTML += `<div class="h-7 w-7 mx-auto flex items-center justify-center rounded-full ${classes}">${d}</div>`;
+            }
+            daysContainer.innerHTML = daysHTML;
+        }
+
+        function calculateProgress() {
+            const year = state.currentDate.getFullYear();
+            const month = state.currentDate.getMonth();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            
+            let daily = [];
+            let totalPossible = state.habits.length * daysInMonth;
+            let totalCompleted = 0;
+
+            if (state.habits.length === 0) {
+                return { dailyProgress: Array(daysInMonth).fill(0), overallProgress: 0, daysInMonth };
+            }
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                let dayCompleted = 0;
+                state.habits.forEach(habit => {
+                    const key = `${habit.id}-${year}-${month}-${d}`;
+                    if (state.trackingData[key]) {
+                        dayCompleted++;
+                        totalCompleted++;
+                    }
+                });
+                daily.push((dayCompleted / state.habits.length) * 100);
+            }
+
+            const overall = totalPossible > 0 ? (totalCompleted / totalPossible) * 100 : 0;
+            return { dailyProgress: daily, overallProgress: overall, daysInMonth };
+        }
+
+        function renderCharts() {
+            const { dailyProgress, overallProgress, daysInMonth } = calculateProgress();
+
+            // Render Donut
+            const donutCircle = document.getElementById('donut-progress');
+            const donutText = document.getElementById('donut-text');
+            const circumference = 2 * Math.PI * 40; // ~251.2
+            const offset = circumference * (1 - overallProgress / 100);
+            
+            donutCircle.style.strokeDashoffset = offset;
+            donutText.textContent = overallProgress.toFixed(1) + '%';
+
+            // Render Bar Chart
+            const barContainer = document.getElementById('bar-chart-container');
+            // Keep background grid lines, remove old bars
+            const gridLines = barContainer.firstElementChild.outerHTML;
+            
+            let barsHTML = gridLines;
+            dailyProgress.forEach((percent, index) => {
+                const color = getColorBlock(index);
+                const height = Math.max(percent, 2); // Minimum 2% height for visibility
+                barsHTML += `
+                    <div class="relative flex flex-col justify-end h-full flex-1 group z-10">
+                        <div 
+                            class="w-full rounded-t-sm transition-all duration-500 ease-in-out opacity-80 group-hover:opacity-100"
+                            style="height: ${height}%; background-color: ${color.fill}"
+                        ></div>
+                        <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-20">
+                            <div class="bg-gray-800 text-white text-xs py-1 px-2 rounded whitespace-nowrap shadow-lg">
+                                Day ${index + 1}: ${Math.round(percent)}%
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            barContainer.innerHTML = barsHTML;
+            document.getElementById('bar-chart-max-day').textContent = daysInMonth;
+        }
+
+        function renderGrid() {
+            const year = state.currentDate.getFullYear();
+            const month = state.currentDate.getMonth();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            const thead = document.getElementById('grid-head');
+            const tbody = document.getElementById('grid-body');
+            document.getElementById('grid-footer-span').colSpan = daysInMonth;
+
+            // Render Headers
+            let row1 = `<tr><th class="sticky left-0 z-20 bg-gray-50 p-4 min-w-[250px] shadow-[1px_0_0_0_#e5e7eb]">
+                            <div class="font-bold text-gray-700 bg-orange-100/50 py-2 px-4 rounded text-center">Daily Habits</div>
+                        </th>`;
+            let row2 = `<tr><th class="sticky left-0 z-20 bg-white p-0 shadow-[1px_0_0_0_#e5e7eb]"></th>`;
+
+            for (let i = 0; i < daysInMonth; i++) {
+                const dayDate = new Date(year, month, i + 1);
+                const isWeekend = dayDate.getDay() === 0 || dayDate.getDay() === 6;
+                const block = getColorBlock(i);
+                
+                row1 += `<th class="p-2 text-center text-xs font-semibold ${block.bg} ${isWeekend ? 'opacity-70' : ''}">${WEEK_DAYS[dayDate.getDay()]}</th>`;
+                row2 += `<th class="p-2 text-center text-xs font-bold text-gray-700 ${block.bg}">${i + 1}</th>`;
+            }
+            row1 += `</tr>`;
+            row2 += `</tr>`;
+            thead.innerHTML = row1 + row2;
+
+            // Render Body
+            let tbodyHTML = '';
+            state.habits.forEach((habit, index) => {
+                tbodyHTML += `<tr class="group hover:bg-gray-50 transition-colors">
+                    <td class="sticky left-0 z-10 bg-white group-hover:bg-gray-50 p-3 shadow-[1px_0_0_0_#e5e7eb]">
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-700 font-medium truncate max-w-[200px]">${index + 1}. ${habit.name}</span>
+                            <button class="remove-habit-btn text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1" data-id="${habit.id}" title="Remove habit">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                            </button>
+                        </div>
+                    </td>`;
+
+                for (let i = 0; i < daysInMonth; i++) {
+                    const day = i + 1;
+                    const key = `${habit.id}-${year}-${month}-${day}`;
+                    const isChecked = !!state.trackingData[key];
+                    const block = getColorBlock(i);
+
+                    let btnClass = isChecked 
+                        ? `${block.active} scale-105 ring-2 ring-offset-1 ${block.ring}`
+                        : `bg-white border ${block.border} hover:bg-gray-50`;
+
+                    let icon = isChecked 
+                        ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>` 
+                        : '';
+
+                    tbodyHTML += `
+                        <td class="p-1.5 text-center ${block.bg}">
+                            <button class="toggle-btn w-6 h-6 mx-auto rounded flex items-center justify-center transition-all shadow-sm ${btnClass}" data-habit="${habit.id}" data-day="${day}">
+                                ${icon}
+                            </button>
+                        </td>`;
+                }
+                tbodyHTML += `</tr>`;
+            });
+            tbody.innerHTML = tbodyHTML;
+        }
+
+        function updateAll() {
+            renderCalendar();
+            renderCharts();
+            renderGrid();
+        }
+
+        // --- Event Listeners ---
+
+        document.getElementById('prev-month').addEventListener('click', () => {
+            state.currentDate = new Date(state.currentDate.getFullYear(), state.currentDate.getMonth() - 1, 1);
+            updateAll();
+        });
+
+        document.getElementById('next-month').addEventListener('click', () => {
+            state.currentDate = new Date(state.currentDate.getFullYear(), state.currentDate.getMonth() + 1, 1);
+            updateAll();
+        });
+
+        // Event delegation for grid interactions (Toggle check & Remove habit)
+        document.getElementById('grid-body').addEventListener('click', (e) => {
+            // Toggle Habit
+            const toggleBtn = e.target.closest('.toggle-btn');
+            if (toggleBtn) {
+                const habitId = toggleBtn.getAttribute('data-habit');
+                const day = toggleBtn.getAttribute('data-day');
+                const year = state.currentDate.getFullYear();
+                const month = state.currentDate.getMonth();
+                const key = `${habitId}-${year}-${month}-${day}`;
+                
+                state.trackingData[key] = !state.trackingData[key];
+                updateAll();
+                return;
+            }
+
+            // Remove Habit
+            const removeBtn = e.target.closest('.remove-habit-btn');
+            if (removeBtn) {
+                const habitId = removeBtn.getAttribute('data-id');
+                state.habits = state.habits.filter(h => h.id !== habitId);
+                updateAll();
+            }
+        });
+
+        // Add Habit
+        document.getElementById('add-habit-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const input = document.getElementById('new-habit-input');
+            const name = input.value.trim();
+            if (!name) return;
+
+            const newHabit = {
+                id: `h${Date.now()}`,
+                name: name
+            };
+            state.habits.push(newHabit);
+            input.value = '';
+            updateAll();
+        });
+
+        // Initialize App
+        generateMockData();
+        updateAll();
+
+    </script>
+</body>
+</html>
