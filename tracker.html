@@ -137,24 +137,15 @@
             
             <div class="mt-8 text-center text-sm text-gray-400 flex items-center justify-center gap-2">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-                <span>Track your daily habits and achieve your goals. Your data is stored locally for this session.</span>
+                <span>Track your daily habits and achieve your goals. Your data is automatically saved in your browser history.</span>
             </div>
 
         </div>
     </div>
 
     <script>
-        // Data & State
-        const INITIAL_HABITS = [
-            { id: 'h1', name: 'Wake up at 7 AM' },
-            { id: 'h2', name: 'Drink 10 cups of water' },
-            { id: 'h3', name: 'Meditate - 10 mins' },
-            { id: 'h4', name: 'Go on a run' },
-            { id: 'h5', name: 'Eat only healthy snacks' },
-            { id: 'h6', name: 'Call friends' },
-            { id: 'h7', name: 'Compliment 5 random people' },
-        ];
-
+        // Data & Storage State
+        const LOCAL_STORAGE_KEY = 'ultimate_habit_tracker_history';
         const WEEK_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
         // Color palettes mapped for Tailwinds arbitrary values/classes
@@ -167,26 +158,36 @@
         ];
 
         let state = {
-            currentDate: new Date(2026, 4, 1), // Default to May 2026
-            habits: [...INITIAL_HABITS],
+            currentDate: new Date(), // Dynamically initializes to today's date
+            habits: [], // Starts blank, ready for you to write
             trackingData: {}
         };
+
+        // Utility: Load Data from Local Storage
+        function loadData() {
+            const savedData = localStorage.getItem(LOCAL_STORAGE_KEY);
+            if (savedData) {
+                try {
+                    const parsedData = JSON.parse(savedData);
+                    state.habits = parsedData.habits || [];
+                    state.trackingData = parsedData.trackingData || {};
+                } catch (e) {
+                    console.error("Failed to load tracking data:", e);
+                }
+            }
+        }
+
+        // Utility: Save Data to Local Storage
+        function saveData() {
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
+                habits: state.habits,
+                trackingData: state.trackingData
+            }));
+        }
 
         // Utility: Get color block based on day index (0-30)
         function getColorBlock(dayIndex) {
             return COLOR_BLOCKS[Math.min(Math.floor(dayIndex / 7), 4)];
-        }
-
-        // Initialize Mock Data
-        function generateMockData() {
-            const days = new Date(2026, 5, 0).getDate(); // May 2026 has 31 days
-            state.habits.forEach((habit, hIdx) => {
-                for (let d = 1; d <= days; d++) {
-                    if (Math.random() > (0.2 + (hIdx * 0.1))) {
-                        state.trackingData[`${habit.id}-2026-4-${d}`] = true;
-                    }
-                }
-            });
         }
 
         // --- Render Functions ---
@@ -323,40 +324,45 @@
 
             // Render Body
             let tbodyHTML = '';
-            state.habits.forEach((habit, index) => {
-                tbodyHTML += `<tr class="group hover:bg-gray-50 transition-colors">
-                    <td class="sticky left-0 z-10 bg-white group-hover:bg-gray-50 p-3 shadow-[1px_0_0_0_#e5e7eb]">
-                        <div class="flex items-center justify-between">
-                            <span class="text-gray-700 font-medium truncate max-w-[200px]">${index + 1}. ${habit.name}</span>
-                            <button class="remove-habit-btn text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1" data-id="${habit.id}" title="Remove habit">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                            </button>
-                        </div>
-                    </td>`;
-
-                for (let i = 0; i < daysInMonth; i++) {
-                    const day = i + 1;
-                    const key = `${habit.id}-${year}-${month}-${day}`;
-                    const isChecked = !!state.trackingData[key];
-                    const block = getColorBlock(i);
-
-                    let btnClass = isChecked 
-                        ? `${block.active} scale-105 ring-2 ring-offset-1 ${block.ring}`
-                        : `bg-white border ${block.border} hover:bg-gray-50`;
-
-                    let icon = isChecked 
-                        ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>` 
-                        : '';
-
-                    tbodyHTML += `
-                        <td class="p-1.5 text-center ${block.bg}">
-                            <button class="toggle-btn w-6 h-6 mx-auto rounded flex items-center justify-center transition-all shadow-sm ${btnClass}" data-habit="${habit.id}" data-day="${day}">
-                                ${icon}
-                            </button>
+            
+            if (state.habits.length === 0) {
+                tbodyHTML = `<tr><td class="p-8 text-center text-gray-400 italic" colspan="${daysInMonth + 1}">Use the form below to add your first habit!</td></tr>`;
+            } else {
+                state.habits.forEach((habit, index) => {
+                    tbodyHTML += `<tr class="group hover:bg-gray-50 transition-colors">
+                        <td class="sticky left-0 z-10 bg-white group-hover:bg-gray-50 p-3 shadow-[1px_0_0_0_#e5e7eb]">
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-700 font-medium truncate max-w-[200px]">${index + 1}. ${habit.name}</span>
+                                <button class="remove-habit-btn text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1" data-id="${habit.id}" title="Remove habit">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                                </button>
+                            </div>
                         </td>`;
-                }
-                tbodyHTML += `</tr>`;
-            });
+
+                    for (let i = 0; i < daysInMonth; i++) {
+                        const day = i + 1;
+                        const key = `${habit.id}-${year}-${month}-${day}`;
+                        const isChecked = !!state.trackingData[key];
+                        const block = getColorBlock(i);
+
+                        let btnClass = isChecked 
+                            ? `${block.active} scale-105 ring-2 ring-offset-1 ${block.ring}`
+                            : `bg-white border ${block.border} hover:bg-gray-50`;
+
+                        let icon = isChecked 
+                            ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>` 
+                            : '';
+
+                        tbodyHTML += `
+                            <td class="p-1.5 text-center ${block.bg}">
+                                <button class="toggle-btn w-6 h-6 mx-auto rounded flex items-center justify-center transition-all shadow-sm ${btnClass}" data-habit="${habit.id}" data-day="${day}">
+                                    ${icon}
+                                </button>
+                            </td>`;
+                    }
+                    tbodyHTML += `</tr>`;
+                });
+            }
             tbody.innerHTML = tbodyHTML;
         }
 
@@ -390,6 +396,8 @@
                 const key = `${habitId}-${year}-${month}-${day}`;
                 
                 state.trackingData[key] = !state.trackingData[key];
+                
+                saveData(); // Save to local storage
                 updateAll();
                 return;
             }
@@ -399,6 +407,8 @@
             if (removeBtn) {
                 const habitId = removeBtn.getAttribute('data-id');
                 state.habits = state.habits.filter(h => h.id !== habitId);
+                
+                saveData(); // Save to local storage
                 updateAll();
             }
         });
@@ -416,11 +426,13 @@
             };
             state.habits.push(newHabit);
             input.value = '';
+            
+            saveData(); // Save to local storage
             updateAll();
         });
 
         // Initialize App
-        generateMockData();
+        loadData(); // Retrieve saved history
         updateAll();
 
     </script>
